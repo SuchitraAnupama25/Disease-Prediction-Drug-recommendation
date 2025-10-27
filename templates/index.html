@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drug Recommendation System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h2>🧠 Disease Prediction & Drug Recommendation</h2>
+    <p>Enter symptoms (comma separated):</p>
+
+    <input 
+      type="text" 
+      id="symptoms" 
+      placeholder="e.g. fever, cough, headache"
+      autocomplete="off"
+    >
+
+    <button id="predict-btn" onclick="predict()">Predict</button>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    async function predict() {
+      const symptoms = document.getElementById("symptoms").value
+                        .split(",")
+                        .map(s => s.trim())
+                        .filter(s => s.length > 0);
+
+      const resultDiv = document.getElementById("result");
+      const button = document.getElementById("predict-btn");
+
+      if (symptoms.length === 0) {
+        alert("⚠️ Please enter at least one symptom.");
+        return;
+      }
+
+      // Loading state
+      button.disabled = true;
+      button.innerText = "Predicting...";
+      resultDiv.innerHTML = "<p class='loading'>⏳ Analyzing symptoms...</p>";
+
+      try {
+        const response = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symptoms }),
+        });
+
+        const data = await response.json();
+        resultDiv.innerHTML = "";
+
+        if (data.predicted_disease) {
+          let html = `
+            <div class="card fade-in">
+              <h3>🧾 Prediction Result</h3>
+              <p><b>Disease:</b> <span class="success">${data.predicted_disease}</span></p>
+          `;
+          if (data.recommended_drug) {
+            html += `<p><b>Recommended Drug:</b> <span class="highlight">${data.recommended_drug}</span></p>`;
+          }
+          html += `</div>`;
+          resultDiv.innerHTML = html;
+        } else if (data.error) {
+          resultDiv.innerHTML = `<p class="error">⚠️ ${data.error}</p>`;
+        }
+      } catch (err) {
+        resultDiv.innerHTML = `<p class="error">⚠️ Could not connect to server.</p>`;
+        console.error(err);
+      }
+
+      button.disabled = false;
+      button.innerText = "Predict";
+    }
+  </script>
+</body>
+</html>
